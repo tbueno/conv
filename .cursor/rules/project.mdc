@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This project is a command-line tool built in golang. It is a simple currency converted tool, built with the following principles.
+
+- Clean, well-architectureds and testable code
+- The project uses direnv and devbox to setup isolated development environment. Any tool that is not a go dependency should be installed via devbox first. Any new terminal session should be run inside the development environment defined with devbox
+- For every new feature, unit tests should be added
+- At the end of every meaningful change or addition, the tests should be executer
+- It relies on go's standard solutions instead of external libraries when possible

@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 This project is a command-line tool built in golang. It is a simple currency converted tool, built with the following principles.
@@ -10,3 +10,4 @@ This project is a command-line tool built in golang. It is a simple currency con
 - For every new feature, unit tests should be added
 - At the end of every meaningful change or addition, the tests should be executer
 - It relies on go's standard solutions instead of external libraries when possible
+- When tests are changed or added, immediatelly run the test suite

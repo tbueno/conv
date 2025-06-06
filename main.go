@@ -1,122 +1,103 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-type Conversion struct {
-	Date   string             `json:"date"`
-	Values map[string]float32 `json:"-"`
+type Currency string
+
+const (
+	USD Currency = "USD"
+	EUR Currency = "EUR"
+	BRL Currency = "BRL"
+)
+
+var supportedCurrencies = []Currency{USD, EUR, BRL}
+
+func (c Currency) String() string {
+	return string(c)
 }
 
-// UnmarshalJSON implements custom JSON unmarshaling
-func (c *Conversion) UnmarshalJSON(data []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-
-	// Extract date
-	if date, ok := raw["date"].(string); ok {
-		c.Date = date
-	}
-
-	// Get the currency field (the only other field in the response)
-	for key := range raw {
-		if key == "date" {
-			continue
-		}
-		if values, ok := raw[key].(map[string]interface{}); ok {
-			c.Values = make(map[string]float32)
-			for k, v := range values {
-				if num, ok := v.(float64); ok {
-					c.Values[k] = float32(num)
-				}
-			}
-			return nil
+func (c Currency) IsValid() bool {
+	for _, supported := range supportedCurrencies {
+		if c == supported {
+			return true
 		}
 	}
-
-	return fmt.Errorf("invalid response format: missing currency conversion map")
-}
-
-func convert(amount float32, from, to string, conversion *Conversion) (float32, error) {
-	url := fmt.Sprintf(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/%v.json`, from)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(conversion)
-	if err != nil {
-		return 0, err
-	}
-
-	if rate, exists := conversion.Values[to]; exists {
-		return rate * amount, nil
-	}
-	return 0, fmt.Errorf("unsupported target currency: %s", to)
+	return false
 }
 
 func listCurrencies() {
-	var currencies map[string]string
+	names := make([]string, len(supportedCurrencies))
+	for i, c := range supportedCurrencies {
+		names[i] = c.String()
+	}
+	fmt.Printf("Supported currencies: %s\n", strings.Join(names, ", "))
+}
 
-	resp, err := http.Get("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json")
+type Input struct {
+	Amount float32
+	From   Currency
+	To     Currency
+}
+
+func parseArgs(args []string) (Input, error) {
+	if len(args) != 4 || args[0] == "" || args[1] == "" || args[2] == "" || args[3] == "" {
+		return Input{}, fmt.Errorf("invalid number of arguments")
+	}
+
+	amount, err := strconv.ParseFloat(args[1], 32)
 	if err != nil {
-		log.Fatal(err)
+		return Input{}, fmt.Errorf("invalid amount %s", args[1])
 	}
-	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&currencies)
+	from := Currency(strings.ToUpper(args[2]))
+	to := Currency(strings.ToUpper(args[3]))
+
+	if !from.IsValid() {
+		return Input{}, fmt.Errorf("unsupported currency: %s", from)
+	}
+	if !to.IsValid() {
+		return Input{}, fmt.Errorf("unsupported currency: %s", to)
+	}
+
+	return Input{
+		Amount: float32(amount),
+		From:   from,
+		To:     to,
+	}, nil
+}
+
+func convert(input Input, conv Converter) (float32, error) {
+	value, err := conv.Convert(input.Amount, strings.ToLower(input.From.String()), strings.ToLower(input.To.String()))
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
-
-	fmt.Println("These are the supported currencies:")
-	names := make([]string, 0, len(currencies))
-
-	for _, name := range currencies {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	for _, name := range names {
-		fmt.Printf("%s: %s\n", name, currencies[name])
-	}
+	return value, nil
 }
 
 func main() {
-	if len(os.Args) != 4 {
+	input, err := parseArgs(os.Args)
+	if err != nil {
 		fmt.Println("Usage: go run main.go <amount> <from> <to>")
 		fmt.Println("Example: go run main.go 100 EUR USD")
-		fmt.Println("Supported currencies: USD, EUR, BRL")
+		fmt.Printf("Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
 		os.Exit(1)
 	}
 
-	amount, err := strconv.ParseFloat(os.Args[1], 32)
-	if err != nil {
-		fmt.Println("Invalid amount. Please provide a valid number.")
-		os.Exit(1)
+	converter := &ApiCurrencyConverter{
+		conversion: &FawazConversion{},
+		apiUrl:     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/%v.json",
 	}
 
-	from := strings.ToLower(os.Args[2])
-	to := strings.ToLower(os.Args[3])
-
-	conversion := &Conversion{}
-	value, err := convert(float32(amount), from, to, conversion)
+	value, err := convert(input, converter)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%v %s is %v %s\n", amount, strings.ToUpper(from), value, strings.ToUpper(to))
+	fmt.Printf("%v %s is %v %s\n", input.Amount, input.From, value, input.To)
 }

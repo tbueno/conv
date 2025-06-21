@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -32,11 +34,27 @@ func (c Currency) IsValid() bool {
 }
 
 func listCurrencies() {
-	names := make([]string, len(supportedCurrencies))
-	for i, c := range supportedCurrencies {
-		names[i] = c.String()
+	url := "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json"
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("Error fetching currencies: %v\n", err)
+		fmt.Printf("Fallback - Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
+		return
 	}
-	fmt.Printf("Supported currencies: %s\n", strings.Join(names, ", "))
+	defer resp.Body.Close()
+
+	var currencies map[string]string
+	err = json.NewDecoder(resp.Body).Decode(&currencies)
+	if err != nil {
+		fmt.Printf("Error parsing currencies: %v\n", err)
+		fmt.Printf("Fallback - Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
+		return
+	}
+
+	fmt.Printf("Available currencies (%d total):\n", len(currencies))
+	for code, name := range currencies {
+		fmt.Printf("  %s - %s\n", strings.ToUpper(code), name)
+	}
 }
 
 type Input struct {
@@ -81,9 +99,16 @@ func convert(input Input, conv Converter) (float32, error) {
 }
 
 func main() {
+	// Check for --list flag
+	if len(os.Args) == 2 && os.Args[1] == "--list" {
+		listCurrencies()
+		os.Exit(0)
+	}
+
 	input, err := parseArgs(os.Args)
 	if err != nil {
 		fmt.Println("Usage: go run main.go <amount> <from> <to>")
+		fmt.Println("       go run main.go --list")
 		fmt.Println("Example: go run main.go 100 EUR USD")
 		fmt.Printf("Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
 		os.Exit(1)

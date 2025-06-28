@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -19,12 +21,25 @@ const (
 )
 
 var supportedCurrencies = []Currency{USD, EUR, BRL}
+var cachedCurrencies map[string]string
 
 func (c Currency) String() string {
 	return string(c)
 }
 
 func (c Currency) IsValid() bool {
+	// Load cached currencies if not already loaded
+	if cachedCurrencies == nil {
+		loadCachedCurrencies()
+	}
+	
+	// Check cached currencies first
+	if cachedCurrencies != nil {
+		_, exists := cachedCurrencies[strings.ToLower(string(c))]
+		return exists
+	}
+	
+	// Fallback to hardcoded currencies
 	for _, supported := range supportedCurrencies {
 		if c == supported {
 			return true
@@ -33,28 +48,78 @@ func (c Currency) IsValid() bool {
 	return false
 }
 
-func listCurrencies() {
+func getCacheFilePath() string {
+	return filepath.Join("conf", "currencies.json")
+}
+
+func loadCachedCurrencies() {
+	cacheFile := getCacheFilePath()
+	data, err := os.ReadFile(cacheFile)
+	if err != nil {
+		// Cache file doesn't exist, try to download and cache
+		downloadAndCacheCurrencies()
+		return
+	}
+	
+	err = json.Unmarshal(data, &cachedCurrencies)
+	if err != nil {
+		log.Printf("Error parsing cached currencies: %v", err)
+		cachedCurrencies = nil
+	}
+}
+
+func downloadAndCacheCurrencies() {
 	url := "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json"
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Printf("Error fetching currencies: %v\n", err)
-		fmt.Printf("Fallback - Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
+		log.Printf("Error fetching currencies for cache: %v", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	var currencies map[string]string
-	err = json.NewDecoder(resp.Body).Decode(&currencies)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Error parsing currencies: %v\n", err)
-		fmt.Printf("Fallback - Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
+		log.Printf("Error reading currency data: %v", err)
 		return
 	}
 
-	fmt.Printf("Available currencies (%d total):\n", len(currencies))
-	for code, name := range currencies {
-		fmt.Printf("  %s - %s\n", strings.ToUpper(code), name)
+	err = json.Unmarshal(data, &cachedCurrencies)
+	if err != nil {
+		log.Printf("Error parsing currency data: %v", err)
+		return
 	}
+
+	// Create conf directory if it doesn't exist
+	confDir := filepath.Dir(getCacheFilePath())
+	err = os.MkdirAll(confDir, 0755)
+	if err != nil {
+		log.Printf("Error creating conf directory: %v", err)
+		return
+	}
+
+	// Save to cache file
+	err = os.WriteFile(getCacheFilePath(), data, 0644)
+	if err != nil {
+		log.Printf("Error saving currencies to cache: %v", err)
+	}
+}
+
+func listCurrencies() {
+	// Load cached currencies if not already loaded
+	if cachedCurrencies == nil {
+		loadCachedCurrencies()
+	}
+	
+	if cachedCurrencies != nil {
+		fmt.Printf("Available currencies (%d total):\n", len(cachedCurrencies))
+		for code, name := range cachedCurrencies {
+			fmt.Printf("  %s - %s\n", strings.ToUpper(code), name)
+		}
+		return
+	}
+	
+	// Fallback if caching failed
+	fmt.Printf("Fallback - Supported currencies: %s\n", strings.Join([]string{USD.String(), EUR.String(), BRL.String()}, ", "))
 }
 
 type Input struct {

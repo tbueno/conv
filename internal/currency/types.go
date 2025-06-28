@@ -1,4 +1,4 @@
-package main
+package currency
 
 import (
 	"encoding/json"
@@ -8,10 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-
-	"conv/cmd"
 )
 
 type Currency string
@@ -106,7 +103,7 @@ func downloadAndCacheCurrencies() {
 	}
 }
 
-func listCurrencies() {
+func ListCurrencies() {
 	// Load cached currencies if not already loaded
 	if cachedCurrencies == nil {
 		loadCachedCurrencies()
@@ -128,43 +125,4 @@ type Input struct {
 	Amount float32
 	From   Currency
 	To     Currency
-}
-
-func parseArgs(args []string) (Input, error) {
-	if len(args) != 4 || args[0] == "" || args[1] == "" || args[2] == "" || args[3] == "" {
-		return Input{}, fmt.Errorf("invalid number of arguments")
-	}
-
-	amount, err := strconv.ParseFloat(args[1], 32)
-	if err != nil {
-		return Input{}, fmt.Errorf("invalid amount %s", args[1])
-	}
-
-	from := Currency(strings.ToUpper(args[2]))
-	to := Currency(strings.ToUpper(args[3]))
-
-	if !from.IsValid() {
-		return Input{}, fmt.Errorf("unsupported currency: %s", from)
-	}
-	if !to.IsValid() {
-		return Input{}, fmt.Errorf("unsupported currency: %s", to)
-	}
-
-	return Input{
-		Amount: float32(amount),
-		From:   from,
-		To:     to,
-	}, nil
-}
-
-func convert(input Input, conv Converter) (float32, error) {
-	value, err := conv.Convert(input.Amount, strings.ToLower(input.From.String()), strings.ToLower(input.To.String()))
-	if err != nil {
-		return 0, err
-	}
-	return value, nil
-}
-
-func main() {
-	cmd.Execute()
 }

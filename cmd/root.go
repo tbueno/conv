@@ -13,23 +13,32 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "conv <amount> <from> <to>",
-	Short: "Convert currency amounts between different currencies",
+	Use:   "conv",
+	Short: "A fast and simple CLI currency converter",
 	Long: `A fast and simple CLI currency converter that supports a wide range of currencies.
 Uses real-time exchange rates from Fawaz Ahmed's Currency API.
 
+BACKWARD COMPATIBILITY:
+  conv <amount> <from> <to>     # Direct conversion (legacy mode)
+  conv --list                   # List currencies (legacy mode)
+
+NEW SUBCOMMAND INTERFACE:
+  conv convert <amount> <from> <to>   # Convert currencies
+  conv list                           # List all currencies
+
 Examples:
-  conv 100 USD EUR    # Convert 100 USD to EUR
-  conv 50 GBP JPY     # Convert 50 GBP to JPY
-  conv --list         # List all available currencies`,
+  conv 100 USD EUR              # Convert 100 USD to EUR (legacy)
+  conv convert 100 USD EUR      # Convert 100 USD to EUR (new)
+  conv --list                   # List currencies (legacy)  
+  conv list                     # List currencies (new)`,
 	Args: cobra.RangeArgs(0, 3),
-	Run:  runConvert,
+	Run:  runRootCmd,
 }
 
 var listFlag bool
 
 func init() {
-	rootCmd.Flags().BoolVarP(&listFlag, "list", "l", false, "List all available currencies")
+	rootCmd.Flags().BoolVarP(&listFlag, "list", "l", false, "List all available currencies (legacy mode)")
 }
 
 func Execute() {
@@ -39,42 +48,50 @@ func Execute() {
 	}
 }
 
-func runConvert(cmd *cobra.Command, args []string) {
-	// Handle --list flag
+func runRootCmd(cmd *cobra.Command, args []string) {
+	// Handle --list flag (legacy mode)
 	if listFlag {
 		currency.ListCurrencies()
 		return
 	}
 
-	// Check if we have the required arguments for conversion
-	if len(args) != 3 {
-		fmt.Println("Error: conversion requires exactly 3 arguments: <amount> <from> <to>")
-		fmt.Println("Use 'conv --help' for more information")
-		os.Exit(1)
+	// Handle direct conversion (legacy mode)
+	if len(args) == 3 {
+		// Parse and validate arguments
+		input, err := ParseLegacyArgs(args)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Perform conversion
+		conv := &converter.ApiCurrencyConverter{
+			Conversion: &converter.FawazConversion{},
+			ApiUrl:     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/%v.json",
+		}
+
+		value, err := converter.Convert(input, conv)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("%v %s is %v %s\n", input.Amount, input.From, value, input.To)
+		return
 	}
 
-	// Parse and validate arguments
-	input, err := parseArgsFromCobra(args)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+	// If no arguments provided, show help
+	if len(args) == 0 {
+		cmd.Help()
+		return
 	}
 
-	// Perform conversion
-	conv := &converter.ApiCurrencyConverter{
-		Conversion: &converter.FawazConversion{},
-		ApiUrl:     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/%v.json",
-	}
-
-	value, err := converter.Convert(input, conv)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("%v %s is %v %s\n", input.Amount, input.From, value, input.To)
+	// Invalid number of arguments
+	fmt.Println("Error: invalid arguments")
+	fmt.Println("Use 'conv --help' for usage information")
+	os.Exit(1)
 }
 
-func parseArgsFromCobra(args []string) (currency.Input, error) {
+func ParseLegacyArgs(args []string) (currency.Input, error) {
 	if len(args) != 3 {
 		return currency.Input{}, fmt.Errorf("invalid number of arguments")
 	}

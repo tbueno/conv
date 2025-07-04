@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+//go:embed conf/currencies.json
+var embeddedFiles embed.FS
 
 type Currency string
 
@@ -52,19 +56,29 @@ func getCacheFilePath() string {
 }
 
 func loadCachedCurrencies() {
+	// First try to load from embedded file
+	data, err := embeddedFiles.ReadFile("conf/currencies.json")
+	if err == nil {
+		err = json.Unmarshal(data, &cachedCurrencies)
+		if err == nil {
+			return // Successfully loaded from embedded file
+		}
+		log.Printf("Error parsing embedded currencies: %v", err)
+	}
+
+	// Fall back to local cache file
 	cacheFile := getCacheFilePath()
-	data, err := os.ReadFile(cacheFile)
-	if err != nil {
-		// Cache file doesn't exist, try to download and cache
-		downloadAndCacheCurrencies()
-		return
-	}
-	
-	err = json.Unmarshal(data, &cachedCurrencies)
-	if err != nil {
+	data, err = os.ReadFile(cacheFile)
+	if err == nil {
+		err = json.Unmarshal(data, &cachedCurrencies)
+		if err == nil {
+			return // Successfully loaded from cache
+		}
 		log.Printf("Error parsing cached currencies: %v", err)
-		cachedCurrencies = nil
 	}
+
+	// Last resort: download and cache
+	downloadAndCacheCurrencies()
 }
 
 func downloadAndCacheCurrencies() {

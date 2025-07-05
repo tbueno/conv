@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"conv/internal/config"
 	"conv/internal/currency"
 	"conv/internal/converter"
 )
@@ -20,15 +21,19 @@ Uses real-time exchange rates from Fawaz Ahmed's Currency API.
 
 BACKWARD COMPATIBILITY:
   conv <amount> <from> <to>     # Direct conversion (legacy mode)
+  conv <amount> <from>          # Convert to default currency (legacy mode)
   conv --list                   # List currencies (legacy mode)
 
 NEW SUBCOMMAND INTERFACE:
-  conv convert <amount> <from> <to>   # Convert currencies
+  conv convert <amount> <from> [to]   # Convert currencies
+  conv config set default-currency <CURRENCY>  # Set default currency
   conv list                           # List all currencies
 
 Examples:
   conv 100 USD EUR              # Convert 100 USD to EUR (legacy)
+  conv 100 USD                  # Convert 100 USD to default currency (legacy)
   conv convert 100 USD EUR      # Convert 100 USD to EUR (new)
+  conv convert 100 USD          # Convert 100 USD to default currency (new)
   conv --list                   # List currencies (legacy)  
   conv list                     # List currencies (new)`,
 	Args: cobra.RangeArgs(0, 3),
@@ -56,7 +61,7 @@ func runRootCmd(cmd *cobra.Command, args []string) {
 	}
 
 	// Handle direct conversion (legacy mode)
-	if len(args) == 3 {
+	if len(args) == 2 || len(args) == 3 {
 		// Parse and validate arguments
 		input, err := ParseLegacyArgs(args)
 		if err != nil {
@@ -92,7 +97,7 @@ func runRootCmd(cmd *cobra.Command, args []string) {
 }
 
 func ParseLegacyArgs(args []string) (currency.Input, error) {
-	if len(args) != 3 {
+	if len(args) < 2 || len(args) > 3 {
 		return currency.Input{}, fmt.Errorf("invalid number of arguments")
 	}
 
@@ -102,13 +107,27 @@ func ParseLegacyArgs(args []string) (currency.Input, error) {
 	}
 
 	from := currency.Currency(strings.ToUpper(args[1]))
-	to := currency.Currency(strings.ToUpper(args[2]))
-
 	if !from.IsValid() {
 		return currency.Input{}, fmt.Errorf("unsupported currency: %s", from)
 	}
-	if !to.IsValid() {
-		return currency.Input{}, fmt.Errorf("unsupported currency: %s", to)
+
+	var to currency.Currency
+	if len(args) == 3 {
+		// Target currency explicitly provided
+		to = currency.Currency(strings.ToUpper(args[2]))
+		if !to.IsValid() {
+			return currency.Input{}, fmt.Errorf("unsupported currency: %s", to)
+		}
+	} else {
+		// Use default currency
+		defaultCurrency, err := config.GetDefaultCurrency()
+		if err != nil {
+			return currency.Input{}, fmt.Errorf("failed to get default currency: %v", err)
+		}
+		if defaultCurrency == "" {
+			return currency.Input{}, fmt.Errorf("no target currency specified and no default currency set. Use 'conv config set default-currency <CURRENCY>' to set a default")
+		}
+		to = defaultCurrency
 	}
 
 	return currency.Input{

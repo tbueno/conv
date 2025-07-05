@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,8 +18,8 @@ Available subcommands:
   show                               Show all configuration settings`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Error: config command requires a subcommand")
-		fmt.Println("Use 'conv config --help' for usage information")
+		cmd.Println("Error: config command requires a subcommand")
+		cmd.Println("Use 'conv config --help' for usage information")
 	},
 }
 
@@ -82,21 +81,21 @@ func runConfigSetCmd(cmd *cobra.Command, args []string) {
 		if value == "" || strings.ToLower(value) == "none" || strings.ToLower(value) == "clear" {
 			err := config.ClearDefaultCurrency()
 			if err != nil {
-				fmt.Printf("Error clearing default currency: %v\n", err)
+				cmd.Printf("Error clearing default currency: %v\n", err)
 				return
 			}
-			fmt.Println("Default currency cleared")
+			cmd.Println("Default currency cleared")
 		} else {
 			err := config.SetDefaultCurrency(value)
 			if err != nil {
-				fmt.Printf("Error setting default currency: %v\n", err)
+				cmd.Printf("Error setting default currency: %v\n", err)
 				return
 			}
-			fmt.Printf("Default currency set to: %s\n", strings.ToUpper(value))
+			cmd.Printf("Default currency set to: %s\n", strings.ToUpper(value))
 		}
 	default:
-		fmt.Printf("Error: unknown setting '%s'\n", setting)
-		fmt.Println("Available settings: default-currency")
+		cmd.Printf("Error: unknown setting '%s'\n", setting)
+		cmd.Println("Available settings: default-currency")
 	}
 }
 
@@ -107,31 +106,31 @@ func runConfigGetCmd(cmd *cobra.Command, args []string) {
 	case "default-currency":
 		currency, err := config.GetDefaultCurrency()
 		if err != nil {
-			fmt.Printf("Error getting default currency: %v\n", err)
+			cmd.Printf("Error getting default currency: %v\n", err)
 			return
 		}
 		if currency == "" {
-			fmt.Println("No default currency set")
+			cmd.Println("No default currency set")
 		} else {
-			fmt.Printf("Default currency: %s\n", currency)
+			cmd.Printf("Default currency: %s\n", currency)
 		}
 	default:
-		fmt.Printf("Error: unknown setting '%s'\n", setting)
-		fmt.Println("Available settings: default-currency")
+		cmd.Printf("Error: unknown setting '%s'\n", setting)
+		cmd.Println("Available settings: default-currency")
 	}
 }
 
 func runConfigShowCmd(cmd *cobra.Command, args []string) {
 	cfg, err := config.GetConfig()
 	if err != nil {
-		fmt.Printf("Error loading configuration: %v\n", err)
+		cmd.Printf("Error loading configuration: %v\n", err)
 		return
 	}
 
-	fmt.Println("Configuration:")
+	cmd.Println("Configuration:")
 	if cfg.DefaultCurrency == "" {
-		fmt.Println("  Default currency: (not set)")
+		cmd.Println("  Default currency: (not set)")
 	} else {
-		fmt.Printf("  Default currency: %s\n", cfg.DefaultCurrency)
+		cmd.Printf("  Default currency: %s\n", cfg.DefaultCurrency)
 	}
 }

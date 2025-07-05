@@ -31,10 +31,12 @@ var configSetCmd = &cobra.Command{
 
 Available settings:
   default-currency <CURRENCY>    Set the default target currency
+  default-currency clear         Clear the default target currency
 
 Examples:
   conv config set default-currency USD
-  conv config set default-currency EUR`,
+  conv config set default-currency EUR
+  conv config set default-currency clear`,
 	Args: cobra.ExactArgs(2),
 	Run:  runConfigSetCmd,
 }
@@ -77,12 +79,21 @@ func runConfigSetCmd(cmd *cobra.Command, args []string) {
 
 	switch setting {
 	case "default-currency":
-		err := config.SetDefaultCurrency(value)
-		if err != nil {
-			fmt.Printf("Error setting default currency: %v\n", err)
-			return
+		if value == "" || strings.ToLower(value) == "none" || strings.ToLower(value) == "clear" {
+			err := config.ClearDefaultCurrency()
+			if err != nil {
+				fmt.Printf("Error clearing default currency: %v\n", err)
+				return
+			}
+			fmt.Println("Default currency cleared")
+		} else {
+			err := config.SetDefaultCurrency(value)
+			if err != nil {
+				fmt.Printf("Error setting default currency: %v\n", err)
+				return
+			}
+			fmt.Printf("Default currency set to: %s\n", strings.ToUpper(value))
 		}
-		fmt.Printf("Default currency set to: %s\n", strings.ToUpper(value))
 	default:
 		fmt.Printf("Error: unknown setting '%s'\n", setting)
 		fmt.Println("Available settings: default-currency")

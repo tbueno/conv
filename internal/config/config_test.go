@@ -35,17 +35,17 @@ func TestConfig_LoadConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset global config for each test
-			globalConfig = nil
+			ResetGlobalConfig()
 			
 			// Create temporary config directory
 			tempDir := t.TempDir()
-			originalUserConfigDir := userConfigDirFunc
+			originalUserConfigDir := UserConfigDirFunc
 			defer func() {
-				userConfigDirFunc = originalUserConfigDir
+				UserConfigDirFunc = originalUserConfigDir
 			}()
 			
-			// Mock userConfigDirFunc to return our temp directory
-			userConfigDirFunc = func() (string, error) {
+			// Mock UserConfigDirFunc to return our temp directory
+			UserConfigDirFunc = func() (string, error) {
 				return tempDir, nil
 			}
 
@@ -105,17 +105,17 @@ func TestConfig_SaveConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset global config for each test
-			globalConfig = nil
+			ResetGlobalConfig()
 
 			// Create temporary config directory
 			tempDir := t.TempDir()
-			originalUserConfigDir := userConfigDirFunc
+			originalUserConfigDir := UserConfigDirFunc
 			defer func() {
-				userConfigDirFunc = originalUserConfigDir
+				UserConfigDirFunc = originalUserConfigDir
 			}()
 
-			// Mock userConfigDirFunc to return our temp directory
-			userConfigDirFunc = func() (string, error) {
+			// Mock UserConfigDirFunc to return our temp directory
+			UserConfigDirFunc = func() (string, error) {
 				return tempDir, nil
 			}
 
@@ -186,17 +186,17 @@ func TestConfig_SetDefaultCurrency(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset global config for each test
-			globalConfig = nil
+			ResetGlobalConfig()
 
 			// Create temporary config directory
 			tempDir := t.TempDir()
-			originalUserConfigDir := userConfigDirFunc
+			originalUserConfigDir := UserConfigDirFunc
 			defer func() {
-				userConfigDirFunc = originalUserConfigDir
+				UserConfigDirFunc = originalUserConfigDir
 			}()
 
-			// Mock userConfigDirFunc to return our temp directory
-			userConfigDirFunc = func() (string, error) {
+			// Mock UserConfigDirFunc to return our temp directory
+			UserConfigDirFunc = func() (string, error) {
 				return tempDir, nil
 			}
 
@@ -249,17 +249,17 @@ func TestConfig_GetDefaultCurrency(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset global config for each test
-			globalConfig = nil
+			ResetGlobalConfig()
 
 			// Create temporary config directory
 			tempDir := t.TempDir()
-			originalUserConfigDir := userConfigDirFunc
+			originalUserConfigDir := UserConfigDirFunc
 			defer func() {
-				userConfigDirFunc = originalUserConfigDir
+				UserConfigDirFunc = originalUserConfigDir
 			}()
 
-			// Mock userConfigDirFunc to return our temp directory
-			userConfigDirFunc = func() (string, error) {
+			// Mock UserConfigDirFunc to return our temp directory
+			UserConfigDirFunc = func() (string, error) {
 				return tempDir, nil
 			}
 
@@ -287,17 +287,17 @@ func TestConfig_GetDefaultCurrency(t *testing.T) {
 
 func TestConfig_GetConfig(t *testing.T) {
 	// Reset global config for test
-	globalConfig = nil
+	ResetGlobalConfig()
 
 	// Create temporary config directory
 	tempDir := t.TempDir()
-	originalUserConfigDir := userConfigDirFunc
+	originalUserConfigDir := UserConfigDirFunc
 	defer func() {
-		userConfigDirFunc = originalUserConfigDir
+		UserConfigDirFunc = originalUserConfigDir
 	}()
 
-	// Mock userConfigDirFunc to return our temp directory
-	userConfigDirFunc = func() (string, error) {
+	// Mock UserConfigDirFunc to return our temp directory
+	UserConfigDirFunc = func() (string, error) {
 		return tempDir, nil
 	}
 
@@ -316,13 +316,13 @@ func TestConfig_GetConfig(t *testing.T) {
 func TestConfig_getConfigFilePath(t *testing.T) {
 	// Create temporary config directory
 	tempDir := t.TempDir()
-	originalUserConfigDir := userConfigDirFunc
+	originalUserConfigDir := UserConfigDirFunc
 	defer func() {
-		userConfigDirFunc = originalUserConfigDir
+		UserConfigDirFunc = originalUserConfigDir
 	}()
 
-	// Mock userConfigDirFunc to return our temp directory
-	userConfigDirFunc = func() (string, error) {
+	// Mock UserConfigDirFunc to return our temp directory
+	UserConfigDirFunc = func() (string, error) {
 		return tempDir, nil
 	}
 

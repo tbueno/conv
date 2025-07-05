@@ -16,11 +16,11 @@ type Config struct {
 
 var globalConfig *Config
 
-// userConfigDirFunc allows mocking os.UserConfigDir in tests
-var userConfigDirFunc = os.UserConfigDir
+// UserConfigDirFunc allows mocking os.UserConfigDir in tests
+var UserConfigDirFunc = os.UserConfigDir
 
 func getConfigFilePath() (string, error) {
-	configDir, err := userConfigDirFunc()
+	configDir, err := UserConfigDirFunc()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user config directory: %w", err)
 	}
@@ -99,6 +99,16 @@ func SetDefaultCurrency(currencyCode string) error {
 	return SaveConfig(config)
 }
 
+func ClearDefaultCurrency() error {
+	config, err := LoadConfig()
+	if err != nil {
+		return err
+	}
+	
+	config.DefaultCurrency = ""
+	return SaveConfig(config)
+}
+
 func GetDefaultCurrency() (currency.Currency, error) {
 	config, err := LoadConfig()
 	if err != nil {
@@ -110,4 +120,9 @@ func GetDefaultCurrency() (currency.Currency, error) {
 
 func GetConfig() (*Config, error) {
 	return LoadConfig()
+}
+
+// ResetGlobalConfig clears the global config cache (for testing)
+func ResetGlobalConfig() {
+	globalConfig = nil
 }

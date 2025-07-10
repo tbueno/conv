@@ -1,5 +1,7 @@
 # Currency Converter
 
+[![Go](https://github.com/tbueno/conv/actions/workflows/go.yml/badge.svg)](https://github.com/tbueno/conv/actions/workflows/go.yml)
+
 A fast and simple CLI currency converter written in Go that supports a wide range of currencies using real-time exchange rates from [Fawaz Ahmed's Currency API](https://github.com/fawazahmed0/exchange-api).
 
 ## Features
